@@ -1,0 +1,138 @@
+<html>
+<head>
+<title>untitled</title>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<style>
+
+body {
+    margin: 0px;
+}
+table {
+    border-collapse: collapse;
+}
+th, td {
+    padding: 0px;
+}
+
+</style>
+</head>
+<body>
+<script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+<script src="http://dglittle.github.io/gl519/index.js"></script>
+<script src="utils.js"></script>
+<script>
+
+// adapted from: https://github.com/Miserlou/OpenSpritz
+
+function spritzify(input, wpm, cb) {
+    var d = $('<div/>')
+    var re = /\S+/g
+    function update() {
+        if ($.contains(document.documentElement, d[0])) {
+            var m = re.exec(input)
+            if (m) {
+                var word = m[0]
+                if (cb) cb(m.index, m.index + word.length)
+                d.empty().append(pivot(word))
+                var wait = 60000 / wpm
+                if (word.match(/[\,\-\(]/) || word.length > 8)
+                    wait *= 2
+                else if (word.match(/[\.\!\?\:\;\)]/))
+                    wait *= 3
+                setTimeout(update, wait)
+            }
+        }
+    }
+    setTimeout(update, 0)
+    return d
+}
+
+function pivot(word) {
+    function repeat(x, n) {
+        return new Array(n + 1).join(x)
+    }
+
+    var n = 23
+
+    var len = word.length
+    var before = 0
+    var after = 0
+    if (len < 6) {
+        before = Math.floor((n - len) / 2)
+        after = Math.ceil((n - len) / 2)
+    } else {
+        before = 7
+        after = n - len - before
+    }
+
+    var m = Math.floor(n / 2) - before
+    var a = word.slice(0, m - 1)
+    var b = word.slice(m - 1, m)
+    var c = word.slice(m)
+
+    return $('<div style="font-family:\'Lucida Console\', Monaco, monospace"/>').
+        append($('<span style="color:rgba(0,0,0,0)"/>').html(repeat('.', before))).
+        append($('<span/>').text(a)).
+        append($('<span style="color:red"/>').text(b)).
+        append($('<span/>').text(c)).
+        append($('<span style="color:rgba(0,0,0,0)"/>').html(repeat('.', after)))
+}
+
+function mySpritz(textarea, spritzContainer) {
+    var currentWord = null
+    var text = textarea.val()
+    var begin = textarea[0].selectionStart
+    var end = textarea[0].selectionEnd
+    text = text.slice(begin, end != begin ? end : undefined)
+    if (!text.match(/\s/)) {
+        text = textarea.val().slice(begin)
+    }
+    spritzContainer.empty().append(spritzify(text, 400, function (s, e) {
+        currentWord = [begin + s, begin + e]
+    }))
+    return function () {
+        spritzContainer.empty()
+        var text = textarea.val()
+        textarea.val(text.slice(0, currentWord[1]))
+        var scrollTop = textarea[0].scrollHeight
+        textarea.val(text)
+        var height = textarea[0].clientHeight
+        if (scrollTop <= height) scrollTop = 0
+        textarea[0].scrollTop = Math.max(0, scrollTop - height / 2)
+        textarea[0].selectionStart = currentWord[0]
+        textarea[0].selectionEnd = currentWord[1]
+    }
+}
+
+function drawMain() {
+    var stops = []
+    var go = $('<button/>').text('go').click(function () {
+        if ($(this).text() == 'go') {
+            stops.push(mySpritz(textarea1, spritzContainer1))
+            stops.push(mySpritz(textarea2, spritzContainer2))
+            $(this).text('stop')
+        } else {
+            _.each(stops, function (s) { s() })
+            $(this).text('go')
+        }
+    })
+    var spritzContainer1 = $('<div style="margin:10px;font-size:30px"/>')
+    var spritzContainer2 = $('<div style="margin:10px;font-size:30px"/>')
+    var spritzContainers = $('<div/>').append(spritzContainer1).append(spritzContainer2)
+    var textarea1 = $('<textarea style="width:100%;height:100%">')
+    var textarea2 = $('<textarea style="width:100%;height:100%">')
+
+    $.get('book.txt', function (s) { textarea1.val(s) })
+    $.get('book2.txt', function (s) { textarea2.val(s) })
+
+    return _.splitVert(100, 1, _.splitHorz(2, 1, go, spritzContainers), _.splitHorz(.5, .5, textarea1, textarea2))
+}
+
+$(function () {
+    $('body').append(drawMain())
+})
+
+</script>
+
+</body>
+</html>
