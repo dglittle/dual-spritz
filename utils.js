@@ -1,4 +1,22 @@
 
+function createCheckBox(label, check, cb) {
+    var d = $('<span/>')
+
+    var c = $('<input type="checkbox"/>')
+    var id = _.randomString(10, /[a-z]/)
+    c.attr('id', id)
+    c.prop('checked', !!check)
+    c.change(function () {
+        if (cb) cb(c.prop('checked'))
+    })
+    d.append(c)
+
+    if (typeof(label) == "string") label = $('<span/>').text(label)
+    d.append($('<label for="' + id + '"/>').append(label))
+
+    return d
+}
+
 function comparator(f, desc) {
     return function (a, b) {
         if (f) {

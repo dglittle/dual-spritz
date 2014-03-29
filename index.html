@@ -24,7 +24,7 @@ th, td {
 
 // adapted from: https://github.com/Miserlou/OpenSpritz
 
-function spritzify(input, wpm, cb) {
+function spritzify(input, wpm, cb, delay) {
     var d = $('<div/>')
     var re = /\S+/g
     function update() {
@@ -43,7 +43,7 @@ function spritzify(input, wpm, cb) {
             }
         }
     }
-    setTimeout(update, 0)
+    setTimeout(update, delay ? delay * (60000 / wpm) : 0)
     return d
 }
 
@@ -55,20 +55,13 @@ function pivot(word) {
     var n = 23
 
     var len = word.length
-    var before = 0
-    var after = 0
-    if (len < 6) {
-        before = Math.floor((n - len) / 2)
-        after = Math.ceil((n - len) / 2)
-    } else {
-        before = 7
-        after = n - len - before
-    }
+    var m = Math.floor(.4999 * len)
+    var before = (n-1)/2 - m
+    var after = (n-1)/2 - (len - m - 1)
 
-    var m = Math.floor(n / 2) - before
-    var a = word.slice(0, m - 1)
-    var b = word.slice(m - 1, m)
-    var c = word.slice(m)
+    var a = word.slice(0, m)
+    var b = word.slice(m, m + 1)
+    var c = word.slice(m + 1)
 
     return $('<div style="font-family:\'Lucida Console\', Monaco, monospace"/>').
         append($('<span style="color:rgba(0,0,0,0)"/>').html(repeat('.', before))).
@@ -78,7 +71,7 @@ function pivot(word) {
         append($('<span style="color:rgba(0,0,0,0)"/>').html(repeat('.', after)))
 }
 
-function mySpritz(textarea, spritzContainer) {
+function mySpritz(textarea, spritzContainer, wpm, delay) {
     var currentWord = null
     var text = textarea.val()
     var begin = textarea[0].selectionStart
@@ -87,9 +80,9 @@ function mySpritz(textarea, spritzContainer) {
     if (!text.match(/\s/)) {
         text = textarea.val().slice(begin)
     }
-    spritzContainer.empty().append(spritzify(text, 400, function (s, e) {
+    spritzContainer.empty().append(spritzify(text, wpm, function (s, e) {
         currentWord = [begin + s, begin + e]
-    }))
+    }, delay))
     return function () {
         spritzContainer.empty()
         var text = textarea.val()
@@ -108,14 +101,29 @@ function drawMain() {
     var stops = []
     var go = $('<button/>').text('go').click(function () {
         if ($(this).text() == 'go') {
-            stops.push(mySpritz(textarea1, spritzContainer1))
-            stops.push(mySpritz(textarea2, spritzContainer2))
+            var _wpm = 1 * wpm.val()
+            if (goRandom[0].value) {
+                function selectRandom(textarea) {
+                    var pos = Math.round(_.lerp(0, 0, 1, textarea.val().length*3/4, Math.random()))
+                    textarea[0].selectionStart = pos
+                    textarea[0].selectionEnd = pos
+                }
+                selectRandom(textarea1)
+                selectRandom(textarea2)
+            }
+            stops.push(mySpritz(textarea1, spritzContainer1, _wpm))
+            stops.push(mySpritz(textarea2, spritzContainer2, _wpm, 0.5))
             $(this).text('stop')
         } else {
             _.each(stops, function (s) { s() })
             $(this).text('go')
         }
     })
+    var goRandom = createCheckBox('random start pos', false, function (yes) {
+        goRandom[0].value = yes
+    })
+    var wpm = $('<input type="text" style="width:50px"/>').val('400')
+    var controls = $('<div/>').append(go).append($('<span/>').text('wpm')).append(wpm).append(goRandom).css('margin-bottom', '10px')
     var spritzContainer1 = $('<div style="margin:10px;font-size:30px"/>')
     var spritzContainer2 = $('<div style="margin:10px;font-size:30px"/>')
     var spritzContainers = $('<div/>').append(spritzContainer1).append(spritzContainer2)
@@ -125,7 +133,7 @@ function drawMain() {
     $.get('book.txt', function (s) { textarea1.val(s) })
     $.get('book2.txt', function (s) { textarea2.val(s) })
 
-    return _.splitVert(100, 1, _.splitHorz(2, 1, go, spritzContainers), _.splitHorz(.5, .5, textarea1, textarea2))
+    return _.splitVert(150, 1, _.splitVert(2, 1, controls, spritzContainers), _.splitHorz(.5, .5, textarea1, textarea2))
 }
 
 $(function () {
