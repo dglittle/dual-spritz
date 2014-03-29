@@ -52,12 +52,15 @@ function pivot(word) {
         return new Array(n + 1).join(x)
     }
 
-    var n = 23
+    var n = 23 - 6
 
     var len = word.length
     var m = Math.floor(.4999 * len)
+    
     var before = (n-1)/2 - m
+    if (before < 0) before = 0
     var after = (n-1)/2 - (len - m - 1)
+    if (after < 0) after = 0
 
     var a = word.slice(0, m)
     var b = word.slice(m, m + 1)
